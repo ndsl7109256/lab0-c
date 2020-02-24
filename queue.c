@@ -12,16 +12,32 @@
 queue_t *q_new()
 {
     queue_t *q = malloc(sizeof(queue_t));
-    /* TODO: What if malloc returned NULL? */
+
+    if (!q)
+        return NULL;
+
     q->head = NULL;
+    q->tail = NULL;
+    q->size = 0;
     return q;
 }
 
 /* Free all storage used by queue */
 void q_free(queue_t *q)
 {
-    /* TODO: How about freeing the list elements and the strings? */
-    /* Free queue structure */
+    if (!q)
+        return;  // queue is empty
+
+    list_ele_t *temp = NULL;
+
+    while (q->head) {
+        temp = q->head;
+        q->head = q->head->next;  // update the head sequentially
+
+        free(temp->value);
+        free(temp);
+    }
+
     free(q);
 }
 
@@ -35,12 +51,27 @@ void q_free(queue_t *q)
 bool q_insert_head(queue_t *q, char *s)
 {
     list_ele_t *newh;
-    /* TODO: What should you do if the q is NULL? */
+    if (!q)
+        return false;
+
     newh = malloc(sizeof(list_ele_t));
-    /* Don't forget to allocate space for the string and copy it */
-    /* What if either call to malloc returns NULL? */
+    if (!newh)
+        return false;
+
+    char *v = strdup(s);
+    if (!v) {
+        free(newh);
+        return false;
+    }
+
+
+    newh->value = v;
     newh->next = q->head;
     q->head = newh;
+
+    ++(q->size);
+    if (q->size == 1)
+        q->tail = newh;
     return true;
 }
 
@@ -53,10 +84,31 @@ bool q_insert_head(queue_t *q, char *s)
  */
 bool q_insert_tail(queue_t *q, char *s)
 {
-    /* TODO: You need to write the complete code for this function */
-    /* Remember: It should operate in O(1) time */
-    /* TODO: Remove the above comment when you are about to implement. */
-    return false;
+    list_ele_t *newh;
+    if (!q)
+        return false;
+
+    newh = malloc(sizeof(list_ele_t));
+    if (!newh)
+        return false;
+
+    char *v = strdup(s);
+    if (!v) {
+        free(newh);
+        return false;
+    }
+
+    newh->value = v;
+    ++q->size;
+    if (q->size == 1) {
+        q->tail = newh;
+        q->head = newh;
+    } else {
+        q->tail->next = newh;
+        q->tail = newh;
+        newh->next = NULL;
+    }
+    return true;
 }
 
 /*
@@ -69,9 +121,25 @@ bool q_insert_tail(queue_t *q, char *s)
  */
 bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
 {
-    /* TODO: You need to fix up this code. */
-    /* TODO: Remove the above comment when you are about to implement. */
+    if (!q || !q->head)
+        return false;
+
+    if (bufsize != 0) {
+        if (strlen(q->head->value) > bufsize) {
+            strncpy(sp, q->head->value, bufsize);
+            sp[bufsize - 1] = '\0';
+        } else {
+            strncpy(sp, (q->head)->value, strlen(q->head->value));
+        }
+    }
+
+    list_ele_t *temp = q->head;
+
     q->head = q->head->next;
+    free(temp->value);
+    free(temp);
+    --q->size;
+
     return true;
 }
 
@@ -81,10 +149,7 @@ bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
  */
 int q_size(queue_t *q)
 {
-    /* TODO: You need to write the code for this function */
-    /* Remember: It should operate in O(1) time */
-    /* TODO: Remove the above comment when you are about to implement. */
-    return 0;
+    return (!q || !q->head) ? 0 : q->size;
 }
 
 /*
@@ -96,8 +161,23 @@ int q_size(queue_t *q)
  */
 void q_reverse(queue_t *q)
 {
-    /* TODO: You need to write the code for this function */
-    /* TODO: Remove the above comment when you are about to implement. */
+    if (!q || !q->head || !q->head->next)
+        return;
+    list_ele_t *prev = q->head;
+    list_ele_t *cur = q->head->next;
+    list_ele_t *nxt;
+    q->tail = prev;
+
+    while (cur->next != NULL) {
+        nxt = cur->next;
+        cur->next = prev;
+        prev = cur;
+        cur = nxt;
+    }
+
+    cur->next = prev;
+    q->head = cur;
+    q->tail->next = NULL;
 }
 
 /*
@@ -105,8 +185,5 @@ void q_reverse(queue_t *q)
  * No effect if q is NULL or empty. In addition, if q has only one
  * element, do nothing.
  */
-void q_sort(queue_t *q)
-{
-    /* TODO: You need to write the code for this function */
-    /* TODO: Remove the above comment when you are about to implement. */
-}
+
+void q_sort(queue_t *q) {}

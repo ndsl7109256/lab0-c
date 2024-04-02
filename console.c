@@ -14,6 +14,7 @@
 
 #include "console.h"
 #include "game.h"
+#include "game_agents/mcts.h"
 #include "game_agents/negamax.h"
 #include "report.h"
 #include "web.h"
@@ -21,6 +22,7 @@
 /* Some global values */
 int simulation = 0;
 int show_entropy = 0;
+int ai_vs_ai = 0;
 static cmd_element_t *cmd_list = NULL;
 static param_element_t *param_list = NULL;
 static bool block_flag = false;
@@ -503,8 +505,8 @@ static bool do_ttt(int argc, char *argv[])
     memset(table, ' ', N_GRIDS);
     char turn = 'X';
     char ai = 'O';
-
-    negamax_init();
+    if (ai_vs_ai)
+        negamax_init();
 
 
     draw_board(table);
@@ -521,9 +523,15 @@ static bool do_ttt(int argc, char *argv[])
         }
 
         if (turn == ai) {
-            int move = negamax_predict(table, ai).move;
+            int move = mcts(table, ai);
             if (move != -1) {
                 table[move] = ai;
+                record_move(move);
+            }
+        } else if (ai_vs_ai) {
+            int move = negamax_predict(table, ai).move;
+            if (move != -1) {
+                table[move] = turn;
                 record_move(move);
             }
         } else {
@@ -539,7 +547,16 @@ static bool do_ttt(int argc, char *argv[])
             table[move] = turn;
             record_move(move);
         }
-        turn = turn == 'X' ? 'O' : 'X';
+        turn = turn ^ 'O' ^ 'X';
+        if (ai_vs_ai) {
+            draw_board(table);
+            time_t timer = time(NULL);
+            struct tm *tm_info = localtime(&timer);
+
+            char buffer[26];
+            strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+            puts(buffer);
+        }
     }
     print_moves();
     return true;
@@ -563,6 +580,7 @@ void init_cmd()
     ADD_COMMAND(time, "Time command execution", "cmd arg ...");
     ADD_COMMAND(web, "Read commands from builtin web server", "[port]");
     ADD_COMMAND(ttt, "Play tic-tac-toe game", "");
+    add_param("AI_CIVIL", &ai_vs_ai, "Let negamax play with mcts", NULL);
     add_cmd("#", do_comment_cmd, "Display comment", "...");
     add_param("simulation", &simulation, "Start/Stop simulation mode", NULL);
     add_param("verbose", &verblevel, "Verbosity level", NULL);
